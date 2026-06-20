@@ -6,6 +6,7 @@ from discord.ext import commands
 
 from models.track import Track
 from services import guild_config
+from services import permissions as perms
 from services.extractor import (
     create_track,
     create_track_from_spotify,
@@ -56,16 +57,6 @@ class MusicCog(commands.Cog, name="Music"):
         if voice_client.channel != target_channel:
             await voice_client.move_to(target_channel)
         return voice_client
-
-    def _check_dj(self, interaction: discord.Interaction) -> None:
-        dj_id = guild_config.dj_role_id(interaction.guild_id)
-        if dj_id is None:
-            return
-        if interaction.user.guild_permissions.administrator:
-            return
-        role_ids = {r.id for r in interaction.user.roles}
-        if dj_id not in role_ids:
-            raise app_commands.AppCommandError("Necesitás el rol DJ para usar este comando.")
 
     def _check_channel(self, interaction: discord.Interaction) -> None:
         ch_id = guild_config.music_channel_id(interaction.guild_id)
@@ -148,7 +139,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="skip", description="Salta la canción actual")
     async def skip(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        self._check_dj(interaction)
+        perms.check(interaction, "skip")
         vc = interaction.guild.voice_client
         if not vc or not (vc.is_playing() or vc.is_paused()):
             return await interaction.response.send_message("No hay nada reproduciéndose.")
@@ -176,7 +167,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="volume", description="Cambia el volumen (0-100)")
     async def volume(self, interaction: discord.Interaction, value: int) -> None:
         self._check_channel(interaction)
-        self._check_dj(interaction)
+        perms.check(interaction, "volume")
         if not 0 <= value <= 100:
             return await interaction.response.send_message("El volumen debe estar entre 0 y 100.")
         service = self.get_or_create_service(interaction)
@@ -234,7 +225,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="previous", description="Vuelve a la canción anterior")
     async def previous(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        self._check_dj(interaction)
+        perms.check(interaction, "previous")
         service = self.get_or_create_service(interaction)
         if not service.history:
             return await interaction.response.send_message("No hay historial de canciones.")
@@ -295,7 +286,7 @@ class MusicCog(commands.Cog, name="Music"):
     ])
     async def loop(self, interaction: discord.Interaction, mode: str) -> None:
         self._check_channel(interaction)
-        self._check_dj(interaction)
+        perms.check(interaction, "loop")
         service = self.get_or_create_service(interaction)
         service.loop_mode = LoopMode(mode)
         labels = {
@@ -337,7 +328,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="clear", description="Limpia la cola de reproducción")
     async def clear(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        self._check_dj(interaction)
+        perms.check(interaction, "clear")
         service = self.get_or_create_service(interaction)
         service.queue.clear()
         await interaction.response.send_message("🧹 Cola limpiada.")
@@ -345,7 +336,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="leave", description="Desconecta el bot del canal de voz")
     async def leave(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        self._check_dj(interaction)
+        perms.check(interaction, "leave")
         service = self.get_or_create_service(interaction)
         await service.disconnect()
         self._states.pop(interaction.guild_id, None)
