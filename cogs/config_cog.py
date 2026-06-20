@@ -3,19 +3,16 @@ from discord import app_commands
 from discord.ext import commands
 
 from services import guild_config
+from services import permissions as perms
 
 
 class ConfigCog(commands.Cog, name="Config"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    def _is_admin(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.guild_permissions.administrator
-
     @app_commands.command(name="config-dj-role", description="Establece el rol DJ del servidor")
     async def set_dj_role(self, interaction: discord.Interaction, role: discord.Role) -> None:
-        if not self._is_admin(interaction):
-            return await interaction.response.send_message("Solo administradores.", ephemeral=True)
+        perms.check(interaction, "config-dj-role")
         guild_config.set_value(interaction.guild_id, dj_role=role.id)
         await interaction.response.send_message(f"✅ Rol DJ establecido: {role.mention}")
 
@@ -23,15 +20,13 @@ class ConfigCog(commands.Cog, name="Config"):
     async def set_music_channel(
         self, interaction: discord.Interaction, channel: discord.TextChannel
     ) -> None:
-        if not self._is_admin(interaction):
-            return await interaction.response.send_message("Solo administradores.", ephemeral=True)
+        perms.check(interaction, "config-music-channel")
         guild_config.set_value(interaction.guild_id, music_channel=channel.id)
         await interaction.response.send_message(f"✅ Canal de música: {channel.mention}")
 
     @app_commands.command(name="config-volume", description="Volumen predeterminado (0-100)")
     async def set_default_volume(self, interaction: discord.Interaction, value: int) -> None:
-        if not self._is_admin(interaction):
-            return await interaction.response.send_message("Solo administradores.", ephemeral=True)
+        perms.check(interaction, "config-volume")
         if not 0 <= value <= 100:
             return await interaction.response.send_message("Valor entre 0 y 100.", ephemeral=True)
         guild_config.set_value(interaction.guild_id, default_volume=value / 100)
@@ -39,8 +34,7 @@ class ConfigCog(commands.Cog, name="Config"):
 
     @app_commands.command(name="config-max-queue", description="Máximo de canciones en cola")
     async def set_max_queue(self, interaction: discord.Interaction, value: int) -> None:
-        if not self._is_admin(interaction):
-            return await interaction.response.send_message("Solo administradores.", ephemeral=True)
+        perms.check(interaction, "config-max-queue")
         if value < 1:
             return await interaction.response.send_message("Mínimo 1.", ephemeral=True)
         guild_config.set_value(interaction.guild_id, max_queue=value)

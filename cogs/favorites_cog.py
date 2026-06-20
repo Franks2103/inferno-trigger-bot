@@ -6,12 +6,24 @@ from services import favorites as fav_service
 from services.extractor import create_track
 
 
+def _check_music_channel(interaction: discord.Interaction) -> str | None:
+    """Returns error message string if wrong channel, else None."""
+    from services import guild_config
+    ch_id = guild_config.music_channel_id(interaction.guild_id)
+    if ch_id and interaction.channel_id != ch_id:
+        channel = interaction.guild.get_channel(ch_id)
+        return f"Usá los comandos de música en {channel.mention if channel else f'<#{ch_id}>'}."
+    return None
+
+
 class FavoritesCog(commands.Cog, name="Favorites"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @app_commands.command(name="fav-add", description="Guarda la canción actual en tus favoritos")
     async def fav_add(self, interaction: discord.Interaction) -> None:
+        if err := _check_music_channel(interaction):
+            return await interaction.response.send_message(err, ephemeral=True)
         # Find the MusicService for this guild via the MusicCog
         music_cog = self.bot.cogs.get("Music")
         service = music_cog.get_service_for_guild(interaction.guild_id) if music_cog else None
@@ -37,6 +49,8 @@ class FavoritesCog(commands.Cog, name="Favorites"):
 
     @app_commands.command(name="fav-list", description="Muestra tu lista de canciones favoritas")
     async def fav_list(self, interaction: discord.Interaction) -> None:
+        if err := _check_music_channel(interaction):
+            return await interaction.response.send_message(err, ephemeral=True)
         favs = fav_service.get_all(interaction.user.id)
         if not favs:
             return await interaction.response.send_message("No tenés favoritos guardados.", ephemeral=True)
@@ -51,6 +65,8 @@ class FavoritesCog(commands.Cog, name="Favorites"):
 
     @app_commands.command(name="fav-play", description="Encola un favorito por posición")
     async def fav_play(self, interaction: discord.Interaction, position: int) -> None:
+        if err := _check_music_channel(interaction):
+            return await interaction.response.send_message(err, ephemeral=True)
         favs = fav_service.get_all(interaction.user.id)
         if not 1 <= position <= len(favs):
             return await interaction.response.send_message(
@@ -88,6 +104,8 @@ class FavoritesCog(commands.Cog, name="Favorites"):
 
     @app_commands.command(name="fav-remove", description="Elimina un favorito por posición")
     async def fav_remove(self, interaction: discord.Interaction, position: int) -> None:
+        if err := _check_music_channel(interaction):
+            return await interaction.response.send_message(err, ephemeral=True)
         removed = fav_service.remove(interaction.user.id, position)
         if not removed:
             favs = fav_service.get_all(interaction.user.id)

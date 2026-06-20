@@ -89,9 +89,13 @@ class NowPlayingView(discord.ui.View):
             await interaction.response.send_message("No hay música sonando.", ephemeral=True)
 
     @discord.ui.button(label="Skip", emoji="⏭️", style=discord.ButtonStyle.primary, row=0)
-    async def skip(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        from services import permissions as perms
+        from discord import app_commands
+        try:
+            perms.check(interaction, "skip")
+        except app_commands.AppCommandError as e:
+            return await interaction.response.send_message(str(e), ephemeral=True)
         vc = interaction.guild.voice_client
         if vc and (vc.is_playing() or vc.is_paused()):
             vc.stop()
@@ -100,9 +104,13 @@ class NowPlayingView(discord.ui.View):
             await interaction.response.send_message("No hay nada reproduciéndose.", ephemeral=True)
 
     @discord.ui.button(label="Stop", emoji="⏹️", style=discord.ButtonStyle.danger, row=0)
-    async def stop(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
+    async def stop(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        from services import permissions as perms
+        from discord import app_commands
+        try:
+            perms.check(interaction, "leave")
+        except app_commands.AppCommandError as e:
+            return await interaction.response.send_message(str(e), ephemeral=True)
         await self.service.disconnect()
         for item in self.children:
             item.disabled = True

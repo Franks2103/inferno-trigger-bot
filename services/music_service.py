@@ -170,12 +170,6 @@ class MusicService:
                 self.bot.loop.call_soon_threadsafe(self._next_event.set)
 
             voice_client.play(source, after=after_play)
-            stats_store.record_play(
-                self.guild.id,
-                track.requester.id,
-                track.title,
-                track.webpage_url,
-            )
 
             if self.on_track_start:
                 await self.on_track_start(self, track)
@@ -204,6 +198,12 @@ class MusicService:
                         "requester_id": track.requester.id,
                         "requester_name": track.requester.display_name,
                     },
+                )
+                stats_store.record_play(
+                    self.guild.id,
+                    track.requester.id,
+                    track.title,
+                    track.webpage_url,
                 )
                 if len(self.history) > 20:
                     self.history.pop(0)

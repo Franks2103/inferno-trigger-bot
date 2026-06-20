@@ -9,8 +9,11 @@ MAX_PER_USER = 25
 def _load() -> dict:
     if not _FILE.exists():
         return {}
-    with _FILE.open() as f:
-        return json.load(f)
+    try:
+        with _FILE.open() as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
 
 
 def _save(data: dict) -> None:
