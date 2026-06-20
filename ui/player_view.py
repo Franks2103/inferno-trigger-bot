@@ -97,8 +97,8 @@ class NowPlayingView(discord.ui.View):
         except app_commands.AppCommandError as e:
             return await interaction.response.send_message(str(e), ephemeral=True)
         vc = interaction.guild.voice_client
-        if vc and (vc.is_playing() or vc.is_paused()):
-            vc.stop()
+        if self.service.current and vc and (vc.is_playing() or vc.is_paused()):
+            self.service.stop_current()
             await interaction.response.send_message("⏭️ Saltando canción.", ephemeral=True)
         else:
             await interaction.response.send_message("No hay nada reproduciéndose.", ephemeral=True)

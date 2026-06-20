@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import random
 import time
 from collections import deque
@@ -12,7 +13,10 @@ from config import FFMPEG_OPTIONS
 from models.track import Track
 from services import history_store
 from services import stats as stats_store
+from services.audio_mixer import GuildAudioCoordinator
 from services.vote_manager import VoteManager
+
+logger = logging.getLogger(__name__)
 
 OnTrackStart = Optional[Callable[["MusicService", Track], Awaitable[None]]]
 
@@ -76,12 +80,16 @@ class MusicService:
         self._queue_event = asyncio.Event()
         self._next_event = asyncio.Event()
         self._player_task: Optional[asyncio.Task] = None
+        self.audio = GuildAudioCoordinator(bot, guild)
 
     @property
     def elapsed_seconds(self) -> int:
         if not self.current or not self._track_start_time:
             return 0
-        return self._seek_position + int(time.monotonic() - self._track_start_time)
+        paused = self.audio.music_paused_seconds
+        if self.audio._music_pause_started is not None:
+            paused += time.monotonic() - self.audio._music_pause_started
+        return self._seek_position + int(time.monotonic() - self._track_start_time - paused)
 
     def add(self, track: Track) -> None:
         self.queue.append(track)
@@ -143,7 +151,6 @@ class MusicService:
                 continue
 
             self.current = track
-            self._next_event.clear()
             self.skip_votes.reset()
 
             if track.stream_url is None:
@@ -151,7 +158,7 @@ class MusicService:
                     from services.extractor import resolve_track
                     await resolve_track(track)
                 except Exception as e:
-                    print(f"No se pudo resolver '{track.title}': {e}")
+                    logger.warning("No se pudo resolver track title=%r error=%s", track.title, e)
                     self.current = None
                     continue
 
@@ -164,19 +171,16 @@ class MusicService:
             source = YTDLSource(track, volume=self.volume, seek_to=seek_to, audio_filter=self.audio_filter)
             self._track_start_time = time.monotonic()
 
-            def after_play(error: Optional[Exception]) -> None:
-                if error:
-                    print(f"Error al reproducir: {error}")
-                self.bot.loop.call_soon_threadsafe(self._next_event.set)
-
-            voice_client.play(source, after=after_play)
-
             if self.on_track_start:
                 await self.on_track_start(self, track)
             elif self.text_channel:
                 await self.text_channel.send(f"🎵 Reproduciendo: **{track.title}**")
 
-            await self._next_event.wait()
+            try:
+                await self.audio.play_music(source)
+            except RuntimeError:
+                self.current = None
+                continue
             self._track_start_time = 0.0
 
             if self._pending_seek is not None:
@@ -225,9 +229,10 @@ class MusicService:
                 if self.text_channel:
                     await self.text_channel.send(f"🤖 Autoplay: **{related.title}**")
         except Exception as e:
-            print(f"Autoplay error: {e}")
+            logger.warning("Autoplay error guild=%s error=%s", self.guild.id, e)
 
     async def disconnect(self, *, cancel_player: bool = True) -> None:
+        await self.audio.close()
         voice_client = self.guild.voice_client
         if voice_client:
             if voice_client.is_playing() or voice_client.is_paused():
@@ -239,6 +244,17 @@ class MusicService:
 
         if cancel_player and self._player_task and not self._player_task.done():
             self._player_task.cancel()
+
+    def stop_current(self) -> None:
+        """Stop only the music layer; active TTS continues safely."""
+        self.audio.stop_music()
+
+    def set_volume(self, volume: float) -> None:
+        self.volume = volume
+        with self.audio._lock:
+            source = self.audio._music_source
+            if isinstance(source, discord.PCMVolumeTransformer):
+                source.volume = volume
 
     async def update_panel(self) -> None:
         """Refresh the persistent music panel embed if one exists for this guild."""

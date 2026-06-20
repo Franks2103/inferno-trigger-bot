@@ -25,6 +25,8 @@ htmlcov/
 
 # Data (runtime, not source)
 data/
+temp/
+logs/
 
 # Editors
 .vscode/

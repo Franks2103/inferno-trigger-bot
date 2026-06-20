@@ -1,8 +1,31 @@
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
+
 _FILE = Path(__file__).parent.parent / "data" / "guild_config.json"
+
+TTS_BRIDGE_DEFAULTS = {
+    "enabled": False,
+    "textChannelId": None,
+    "language": "es",
+    "voice": "default",
+    "maxChars": int(os.getenv("TTS_MAX_CHARS", "250")),
+    "cooldownSeconds": int(os.getenv("TTS_COOLDOWN_SECONDS", "5")),
+    "readUsername": True,
+    "usernameTemplate": "{username} dice",
+    "ignoreBots": True,
+    "ignoreCommands": True,
+    "blockMentions": True,
+    "blockLinks": False,
+    "requireUserInVoice": True,
+    "autoJoinUserVoiceChannel": True,
+    "autoMoveBetweenVoiceChannels": False,
+    "pauseMusicWhileSpeaking": True,
+    "maxPendingPerUser": 3,
+    "maxPendingPerGuild": 20,
+}
 
 
 def _load() -> dict:
@@ -56,3 +79,15 @@ def panel_ids(guild_id: int) -> tuple[int | None, int | None]:
 
 def set_panel(guild_id: int, channel_id: int | None, message_id: int | None) -> None:
     set_value(guild_id, panel_channel_id=channel_id, panel_message_id=message_id)
+
+
+def tts_bridge(guild_id: int) -> dict:
+    """Return a complete TTS Bridge config, including safe defaults."""
+    configured = get(guild_id).get("ttsBridgeConfig", {})
+    return {**TTS_BRIDGE_DEFAULTS, **configured}
+
+
+def set_tts_bridge(guild_id: int, **kwargs) -> None:
+    config = tts_bridge(guild_id)
+    config.update(kwargs)
+    set_value(guild_id, ttsBridgeConfig=config)
