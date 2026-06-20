@@ -246,7 +246,7 @@ class MusicService:
         from ui.player_view import NowPlayingView, build_now_playing_embed
 
         channel_id, message_id = guild_config.panel_ids(self.guild.id)
-        if not channel_id or not message_id:
+        if channel_id is None or message_id is None:
             return
 
         channel = self.guild.get_channel(channel_id)
@@ -258,15 +258,20 @@ class MusicService:
         except discord.NotFound:
             guild_config.set_panel(self.guild.id, None, None)
             return
+        except discord.HTTPException:
+            return  # transient error, leave panel IDs intact
 
-        if self.current:
-            embed = build_now_playing_embed(self.current, self)
-            view = NowPlayingView(self)
-            await message.edit(embed=embed, view=view)
-        else:
-            embed = discord.Embed(
-                title="🎵 Panel de Música",
-                description="Sin reproducción activa.",
-                color=discord.Color.greyple(),
-            )
-            await message.edit(embed=embed, view=None)
+        try:
+            if self.current:
+                embed = build_now_playing_embed(self.current, self)
+                view = NowPlayingView(self)
+                await message.edit(embed=embed, view=view)
+            else:
+                embed = discord.Embed(
+                    title="🎵 Panel de Música",
+                    description="Sin reproducción activa.",
+                    color=discord.Color.greyple(),
+                )
+                await message.edit(embed=embed, view=None)
+        except discord.HTTPException:
+            return
