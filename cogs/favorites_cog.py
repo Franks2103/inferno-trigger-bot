@@ -14,7 +14,7 @@ class FavoritesCog(commands.Cog, name="Favorites"):
     async def fav_add(self, interaction: discord.Interaction) -> None:
         # Find the MusicService for this guild via the MusicCog
         music_cog = self.bot.cogs.get("Music")
-        service = music_cog._states.get(interaction.guild_id) if music_cog else None
+        service = music_cog.get_service_for_guild(interaction.guild_id) if music_cog else None
 
         if not service or not service.current:
             return await interaction.response.send_message(

@@ -35,6 +35,10 @@ class MusicCog(commands.Cog, name="Music"):
         self._states[guild_id].text_channel = interaction.channel
         return self._states[guild_id]
 
+    def get_service_for_guild(self, guild_id: int) -> MusicService | None:
+        """Public API for other cogs to read the current MusicService."""
+        return self._states.get(guild_id)
+
     async def _send_now_playing(self, service: MusicService, track: Track) -> None:
         if not service.text_channel:
             return
