@@ -376,6 +376,15 @@ class MusicCog(commands.Cog, name="Music"):
         }
         await interaction.response.send_message(labels[name])
 
+    @app_commands.command(name="history", description="Muestra el historial de canciones reproducidas")
+    async def history(self, interaction: discord.Interaction) -> None:
+        self._check_channel(interaction)
+        from services import history_store
+        from ui.history_view import build_history_embed
+        entries = history_store.get_all(interaction.guild_id)
+        embed = build_history_embed(entries, interaction.guild)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
     async def cog_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:

@@ -10,6 +10,7 @@ from discord.ext import commands
 
 from config import FFMPEG_OPTIONS
 from models.track import Track
+from services import history_store
 from services.vote_manager import VoteManager
 
 OnTrackStart = Optional[Callable[["MusicService", Track], Awaitable[None]]]
@@ -187,6 +188,16 @@ class MusicService:
                 self._queue_event.set()
             else:
                 self.history.append(track)
+                history_store.push(
+                    self.guild.id,
+                    {
+                        "title": track.title,
+                        "webpage_url": track.webpage_url,
+                        "thumbnail": track.thumbnail,
+                        "requester_id": track.requester.id,
+                        "requester_name": track.requester.display_name,
+                    },
+                )
                 if len(self.history) > 20:
                     self.history.pop(0)
 
