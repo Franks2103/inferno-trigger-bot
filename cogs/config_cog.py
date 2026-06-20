@@ -52,10 +52,12 @@ class ConfigCog(commands.Cog, name="Config"):
         guild = interaction.guild
 
         dj_role_id = cfg.get("dj_role")
-        dj_role = guild.get_role(dj_role_id).mention if dj_role_id else "No configurado"
+        dj_role_obj = guild.get_role(dj_role_id) if dj_role_id else None
+        dj_role = dj_role_obj.mention if dj_role_obj else "No configurado (rol eliminado)"
 
         ch_id = cfg.get("music_channel")
-        channel = guild.get_channel(ch_id).mention if ch_id else "Cualquier canal"
+        ch_obj = guild.get_channel(ch_id) if ch_id else None
+        channel = ch_obj.mention if ch_obj else "Cualquier canal"
 
         vol = int(cfg.get("default_volume", 0.5) * 100)
         max_q = cfg.get("max_queue", 100)
