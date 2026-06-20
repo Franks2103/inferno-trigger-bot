@@ -30,7 +30,7 @@ class AudioFilter(Enum):
     KARAOKE = "karaoke"
 
 
-FILTER_ARGS: dict["AudioFilter", str] = {
+FILTER_ARGS: dict[AudioFilter, str] = {
     AudioFilter.OFF: "",
     AudioFilter.BASS_BOOST: "bass=g=10",
     AudioFilter.NIGHTCORE: "asetrate=44100*1.25,aresample=44100",
@@ -47,7 +47,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
             options["before_options"] = f"{options.get('before_options', '')} -ss {seek_to}"
         filter_str = FILTER_ARGS.get(audio_filter, "") if audio_filter else ""
         if filter_str:
-            options["options"] = f"{options.get('options', '')} -af \"{filter_str}\""
+            existing = options.get("options", "").strip()
+            options["options"] = f"{existing} -af \"{filter_str}\"".strip()
         source = discord.FFmpegPCMAudio(track.stream_url, **options)
         super().__init__(source, volume)
         self.track = track
