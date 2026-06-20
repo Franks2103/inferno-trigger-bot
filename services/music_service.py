@@ -11,6 +11,7 @@ from discord.ext import commands
 from config import FFMPEG_OPTIONS
 from models.track import Track
 from services import history_store
+from services import stats as stats_store
 from services.vote_manager import VoteManager
 
 OnTrackStart = Optional[Callable[["MusicService", Track], Awaitable[None]]]
@@ -169,6 +170,12 @@ class MusicService:
                 self.bot.loop.call_soon_threadsafe(self._next_event.set)
 
             voice_client.play(source, after=after_play)
+            stats_store.record_play(
+                self.guild.id,
+                track.requester.id,
+                track.title,
+                track.webpage_url,
+            )
 
             if self.on_track_start:
                 await self.on_track_start(self, track)

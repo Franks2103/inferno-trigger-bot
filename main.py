@@ -23,6 +23,7 @@ async def main() -> None:
         await bot.load_extension("cogs.music")
         await bot.load_extension("cogs.config_cog")
         await bot.load_extension("cogs.favorites_cog")
+        await bot.load_extension("cogs.stats_cog")
         await bot.start(TOKEN)
 
 
