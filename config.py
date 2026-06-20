@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -34,3 +35,11 @@ FFMPEG_OPTIONS = {
     "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     "options": "-vn",
 }
+
+# Bandelion TTS Bridge. These environment values are global safety defaults;
+# each guild may override the character and cooldown limits in its config.
+TTS_BRIDGE_ENABLED = os.getenv("TTS_BRIDGE_ENABLED", "true").lower() == "true"
+TTS_PROVIDER = os.getenv("TTS_PROVIDER", "espeak")
+TTS_MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "250"))
+TTS_COOLDOWN_SECONDS = int(os.getenv("TTS_COOLDOWN_SECONDS", "5"))
+TTS_TEMP_DIR = Path(os.getenv("TTS_TEMP_DIR", "temp/tts"))

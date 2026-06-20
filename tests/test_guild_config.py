@@ -27,3 +27,15 @@ def test_dj_role_id_returns_value_when_set(tmp_path, monkeypatch):
     monkeypatch.setattr(gc, "_FILE", tmp_path / "guild_config.json")
     gc.set_value(999, dj_role=111)
     assert gc.dj_role_id(999) == 111
+
+
+def test_tts_bridge_returns_defaults_and_persists_updates(tmp_path, monkeypatch):
+    monkeypatch.setattr(gc, "_FILE", tmp_path / "guild_config.json")
+    config = gc.tts_bridge(999)
+    assert config["enabled"] is False
+    assert config["maxChars"] == 250
+
+    gc.set_tts_bridge(999, enabled=True, textChannelId=123)
+    config = gc.tts_bridge(999)
+    assert config["enabled"] is True
+    assert config["textChannelId"] == 123

@@ -72,3 +72,20 @@ def check(interaction: discord.Interaction, action: str) -> None:
     role_ids = {r.id for r in member.roles}
     if dj_id not in role_ids:
         raise app_commands.AppCommandError("Necesitás el rol DJ para usar este comando.")
+
+
+def check_tts_manager(interaction: discord.Interaction) -> None:
+    """Allow only admins, Manage Guild members, or the configured DJ role.
+
+    Unlike generic DJ commands, a missing DJ role must not make configuration
+    available to everyone.
+    """
+    member = interaction.user
+    if member.guild_permissions.administrator or member.guild_permissions.manage_guild:
+        return
+    dj_id = guild_config.dj_role_id(interaction.guild_id)
+    if dj_id and dj_id in {role.id for role in member.roles}:
+        return
+    raise app_commands.AppCommandError(
+        "Necesitás Administrador, Gestionar servidor o el rol DJ para configurar TTS."
+    )

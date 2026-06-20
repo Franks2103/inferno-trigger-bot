@@ -27,13 +27,17 @@ class MusicCog(commands.Cog, name="Music"):
         self._states: dict[int, MusicService] = {}
 
     def get_or_create_service(self, interaction: discord.Interaction) -> MusicService:
-        guild_id = interaction.guild_id
+        service = self.get_or_create_service_for_guild(interaction.guild)
+        service.text_channel = interaction.channel
+        return service
+
+    def get_or_create_service_for_guild(self, guild: discord.Guild) -> MusicService:
+        guild_id = guild.id
         if guild_id not in self._states:
-            service = MusicService(self.bot, interaction.guild)
+            service = MusicService(self.bot, guild)
             service.volume = guild_config.default_volume(guild_id)
             service.on_track_start = self._send_now_playing
             self._states[guild_id] = service
-        self._states[guild_id].text_channel = interaction.channel
         return self._states[guild_id]
 
     def get_service_for_guild(self, guild_id: int) -> MusicService | None:
@@ -141,10 +145,11 @@ class MusicCog(commands.Cog, name="Music"):
     async def skip(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
         perms.check(interaction, "skip")
+        service = self.get_or_create_service(interaction)
         vc = interaction.guild.voice_client
-        if not vc or not (vc.is_playing() or vc.is_paused()):
+        if not service.current or not vc or not (vc.is_playing() or vc.is_paused()):
             return await interaction.response.send_message("No hay nada reproduciéndose.")
-        vc.stop()
+        service.stop_current()
         await interaction.response.send_message("⏭️ Saltando canción.")
 
     @app_commands.command(name="pause", description="Pausa la reproducción")
@@ -172,10 +177,7 @@ class MusicCog(commands.Cog, name="Music"):
         if not 0 <= value <= 100:
             return await interaction.response.send_message("El volumen debe estar entre 0 y 100.")
         service = self.get_or_create_service(interaction)
-        service.volume = value / 100
-        vc = interaction.guild.voice_client
-        if vc and isinstance(vc.source, discord.PCMVolumeTransformer):
-            vc.source.volume = service.volume
+        service.set_volume(value / 100)
         await interaction.response.send_message(f"🔊 Volumen: **{value}%**")
 
     @app_commands.command(name="now", description="Muestra la canción que suena ahora")
@@ -199,7 +201,7 @@ class MusicCog(commands.Cog, name="Music"):
         if not vc or not (vc.is_playing() or vc.is_paused()):
             return await interaction.response.send_message("No hay nada reproduciéndose.")
         service.seek(0)
-        vc.stop()
+        service.stop_current()
         await interaction.response.send_message("🔄 Reiniciando canción.")
 
     @app_commands.command(name="seek", description="Salta a un punto de la canción (formato: 1:30 o 90)")
@@ -221,7 +223,7 @@ class MusicCog(commands.Cog, name="Music"):
             return await interaction.response.send_message("No hay nada reproduciéndose.")
 
         service.seek(seconds)
-        vc.stop()
+        service.stop_current()
         m, s = divmod(seconds, 60)
         await interaction.response.send_message(f"⏩ Saltando a `{m}:{s:02d}`.")
 
@@ -234,9 +236,7 @@ class MusicCog(commands.Cog, name="Music"):
             return await interaction.response.send_message("No hay historial de canciones.")
         prev_track = service.history.pop()
         service.queue.appendleft(prev_track)
-        vc = interaction.guild.voice_client
-        if vc and (vc.is_playing() or vc.is_paused()):
-            vc.stop()
+        service.stop_current()
         await interaction.response.send_message(f"⏮️ Volviendo a: **{prev_track.title}**")
 
     @app_commands.command(name="autoplay", description="Activa o desactiva el autoplay al terminar la cola")
@@ -270,7 +270,7 @@ class MusicCog(commands.Cog, name="Music"):
         votes, required, passed = service.skip_votes.add(interaction.user.id, len(listeners))
 
         if passed:
-            vc.stop()
+            service.stop_current()
             await interaction.response.send_message(
                 f"⏭️ Saltando por votación ({votes}/{required} votos)."
             )
@@ -339,6 +339,9 @@ class MusicCog(commands.Cog, name="Music"):
         self._check_channel(interaction)
         perms.check(interaction, "leave")
         service = self.get_or_create_service(interaction)
+        tts_cog = self.bot.get_cog("TtsBridge")
+        if tts_cog:
+            await tts_cog.clear_guild(interaction.guild_id, stop_current=True)
         await service.disconnect()
         self._states.pop(interaction.guild_id, None)
         await interaction.response.send_message("🛑 Devil Trigger se apagó.")
@@ -364,9 +367,7 @@ class MusicCog(commands.Cog, name="Music"):
         if service.current:
             elapsed = service.elapsed_seconds
             service.seek(elapsed)
-            vc = interaction.guild.voice_client
-            if vc and (vc.is_playing() or vc.is_paused()):
-                vc.stop()
+            service.stop_current()
 
         labels = {
             "off": "🔇 Sin filtro",
