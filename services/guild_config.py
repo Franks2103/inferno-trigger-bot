@@ -43,3 +43,13 @@ def default_volume(guild_id: int) -> float:
 
 def max_queue(guild_id: int) -> int:
     return get(guild_id).get("max_queue", 100)
+
+
+def panel_ids(guild_id: int) -> tuple[int | None, int | None]:
+    """Returns (channel_id, message_id) or (None, None)."""
+    cfg = get(guild_id)
+    return cfg.get("panel_channel_id"), cfg.get("panel_message_id")
+
+
+def set_panel(guild_id: int, channel_id: int | None, message_id: int | None) -> None:
+    set_value(guild_id, panel_channel_id=channel_id, panel_message_id=message_id)

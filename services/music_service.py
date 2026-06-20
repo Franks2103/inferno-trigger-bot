@@ -239,3 +239,34 @@ class MusicService:
 
         if cancel_player and self._player_task and not self._player_task.done():
             self._player_task.cancel()
+
+    async def update_panel(self) -> None:
+        """Refresh the persistent music panel embed if one exists for this guild."""
+        from services import guild_config
+        from ui.player_view import NowPlayingView, build_now_playing_embed
+
+        channel_id, message_id = guild_config.panel_ids(self.guild.id)
+        if not channel_id or not message_id:
+            return
+
+        channel = self.guild.get_channel(channel_id)
+        if not channel:
+            return
+
+        try:
+            message = await channel.fetch_message(message_id)
+        except discord.NotFound:
+            guild_config.set_panel(self.guild.id, None, None)
+            return
+
+        if self.current:
+            embed = build_now_playing_embed(self.current, self)
+            view = NowPlayingView(self)
+            await message.edit(embed=embed, view=view)
+        else:
+            embed = discord.Embed(
+                title="🎵 Panel de Música",
+                description="Sin reproducción activa.",
+                color=discord.Color.greyple(),
+            )
+            await message.edit(embed=embed, view=None)

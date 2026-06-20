@@ -20,6 +20,8 @@ from ui.search_view import SearchView, build_search_embed
 
 
 class MusicCog(commands.Cog, name="Music"):
+    _panel_group = app_commands.Group(name="musicpanel", description="Gestiona el panel persistente de música")
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._states: dict[int, MusicService] = {}
@@ -39,11 +41,11 @@ class MusicCog(commands.Cog, name="Music"):
         return self._states.get(guild_id)
 
     async def _send_now_playing(self, service: MusicService, track: Track) -> None:
-        if not service.text_channel:
-            return
-        embed = build_now_playing_embed(track, service)
-        view = NowPlayingView(service)
-        await service.text_channel.send(embed=embed, view=view)
+        if service.text_channel:
+            embed = build_now_playing_embed(track, service)
+            view = NowPlayingView(service)
+            await service.text_channel.send(embed=embed, view=view)
+        await service.update_panel()
 
     async def _ensure_voice(self, interaction: discord.Interaction) -> discord.VoiceClient:
         if interaction.user.voice is None or interaction.user.voice.channel is None:
@@ -384,6 +386,47 @@ class MusicCog(commands.Cog, name="Music"):
         entries = history_store.get_all(interaction.guild_id)
         embed = build_history_embed(entries, interaction.guild)
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @_panel_group.command(name="create", description="Crea el panel persistente de música en este canal")
+    async def musicpanel_create(self, interaction: discord.Interaction) -> None:
+        perms.check(interaction, "musicpanel")
+        service = self.get_or_create_service(interaction)
+        if service.current:
+            embed = build_now_playing_embed(service.current, service)
+            view = NowPlayingView(service)
+        else:
+            embed = discord.Embed(
+                title="🎵 Panel de Música",
+                description="Sin reproducción activa.",
+                color=discord.Color.greyple(),
+            )
+            view = None
+        await interaction.response.send_message("📌 Panel creado.", ephemeral=True)
+        msg = await interaction.channel.send(embed=embed, view=view)
+        guild_config.set_panel(interaction.guild_id, interaction.channel_id, msg.id)
+
+    @_panel_group.command(name="delete", description="Elimina el panel persistente de música")
+    async def musicpanel_delete(self, interaction: discord.Interaction) -> None:
+        perms.check(interaction, "musicpanel")
+        channel_id, message_id = guild_config.panel_ids(interaction.guild_id)
+        if not channel_id or not message_id:
+            return await interaction.response.send_message("No hay panel activo.", ephemeral=True)
+        channel = interaction.guild.get_channel(channel_id)
+        if channel:
+            try:
+                msg = await channel.fetch_message(message_id)
+                await msg.delete()
+            except discord.NotFound:
+                pass
+        guild_config.set_panel(interaction.guild_id, None, None)
+        await interaction.response.send_message("🗑️ Panel eliminado.", ephemeral=True)
+
+    @_panel_group.command(name="refresh", description="Actualiza manualmente el panel")
+    async def musicpanel_refresh(self, interaction: discord.Interaction) -> None:
+        perms.check(interaction, "musicpanel")
+        service = self.get_or_create_service(interaction)
+        await service.update_panel()
+        await interaction.response.send_message("✅ Panel actualizado.", ephemeral=True)
 
     async def cog_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
