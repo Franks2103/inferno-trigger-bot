@@ -10,6 +10,7 @@ from discord.ext import commands
 
 from config import FFMPEG_OPTIONS
 from models.track import Track
+from services.vote_manager import VoteManager
 
 OnTrackStart = Optional[Callable[["MusicService", Track], Awaitable[None]]]
 
@@ -42,7 +43,7 @@ class MusicService:
         self.autoplay: bool = False
         self.text_channel: Optional[discord.abc.Messageable] = None
         self.on_track_start: OnTrackStart = None
-        self._skip_votes: set[int] = set()
+        self.skip_votes: VoteManager = VoteManager(threshold=0.5, min_votes=1)
         self._pending_seek: Optional[int] = None
         self._seek_position: int = 0
         self._track_start_time: float = 0.0
@@ -117,7 +118,7 @@ class MusicService:
 
             self.current = track
             self._next_event.clear()
-            self._skip_votes.clear()
+            self.skip_votes.reset()
 
             if track.stream_url is None:
                 try:

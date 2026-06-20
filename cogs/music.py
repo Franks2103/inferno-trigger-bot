@@ -1,5 +1,3 @@
-import math
-
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -263,16 +261,13 @@ class MusicCog(commands.Cog, name="Music"):
         if not vc:
             return await interaction.response.send_message("No estoy en un canal de voz.")
 
-        listeners = [m for m in vc.channel.members if not m.bot]
-        required = max(1, math.ceil(len(listeners) / 2))
-
-        if interaction.user.id in service._skip_votes:
+        if service.skip_votes.has_voted(interaction.user.id):
             return await interaction.response.send_message("Ya votaste para saltear.", ephemeral=True)
 
-        service._skip_votes.add(interaction.user.id)
-        votes = len(service._skip_votes)
+        listeners = [m for m in vc.channel.members if not m.bot]
+        votes, required, passed = service.skip_votes.add(interaction.user.id, len(listeners))
 
-        if votes >= required:
+        if passed:
             vc.stop()
             await interaction.response.send_message(
                 f"⏭️ Saltando por votación ({votes}/{required} votos)."
