@@ -1,6 +1,5 @@
 # services/permissions.py
 from enum import Enum, auto
-from typing import Optional
 
 import discord
 from discord import app_commands
@@ -28,6 +27,8 @@ ACTION_PERMS: dict[str, PermLevel] = {
     "remove": PermLevel.EVERYONE,
     "move": PermLevel.EVERYONE,
     "history": PermLevel.EVERYONE,
+    "pause": PermLevel.EVERYONE,
+    "resume": PermLevel.EVERYONE,
     "seek": PermLevel.DJ,
     "replay": PermLevel.DJ,
     "skip": PermLevel.DJ,

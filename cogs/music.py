@@ -70,6 +70,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="join", description="Conecta al canal de voz actual")
     async def join(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
+        perms.check(interaction, "join")
         await self._ensure_voice(interaction)
         await interaction.response.send_message("✅ Conectado al canal de voz.")
 
@@ -190,6 +191,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="replay", description="Reinicia la canción actual desde el principio")
     async def replay(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
+        perms.check(interaction, "replay")
         service = self.get_or_create_service(interaction)
         if not service.current:
             return await interaction.response.send_message("No hay nada reproduciéndose.")
@@ -203,6 +205,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="seek", description="Salta a un punto de la canción (formato: 1:30 o 90)")
     async def seek(self, interaction: discord.Interaction, tiempo: str) -> None:
         self._check_channel(interaction)
+        perms.check(interaction, "seek")
         service = self.get_or_create_service(interaction)
         if not service.current:
             return await interaction.response.send_message("No hay nada reproduciéndose.")
@@ -243,6 +246,7 @@ class MusicCog(commands.Cog, name="Music"):
     ])
     async def autoplay(self, interaction: discord.Interaction, mode: str) -> None:
         self._check_channel(interaction)
+        perms.check(interaction, "autoplay")
         service = self.get_or_create_service(interaction)
         service.autoplay = mode == "on"
         icon = "▶️" if service.autoplay else "⏹️"
