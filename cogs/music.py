@@ -431,11 +431,8 @@ class MusicCog(commands.Cog, name="Music"):
     async def cog_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
-        msg = str(error)
-        if interaction.response.is_done():
-            await interaction.followup.send(f"⚠️ {msg}", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"⚠️ {msg}", ephemeral=True)
+        from ui.embeds import error_embed, safe_reply
+        await safe_reply(interaction, embed=error_embed(str(error)), ephemeral=True)
 
 
 def _parse_time(value: str) -> int | None:

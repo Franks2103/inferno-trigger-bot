@@ -101,11 +101,8 @@ class FavoritesCog(commands.Cog, name="Favorites"):
     async def cog_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
-        msg = str(error)
-        if interaction.response.is_done():
-            await interaction.followup.send(f"⚠️ {msg}", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"⚠️ {msg}", ephemeral=True)
+        from ui.embeds import error_embed, safe_reply
+        await safe_reply(interaction, embed=error_embed(str(error)), ephemeral=True)
 
 
 async def setup(bot: commands.Bot) -> None:
