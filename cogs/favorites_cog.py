@@ -65,7 +65,7 @@ class FavoritesCog(commands.Cog, name="Favorites"):
         if not music_cog:
             return await interaction.followup.send("Error interno.", ephemeral=True)
 
-        service = music_cog._get_service(interaction)
+        service = music_cog.get_or_create_service(interaction)
         was_playing = service.current is not None
 
         # Ensure voice

@@ -25,7 +25,7 @@ class MusicCog(commands.Cog, name="Music"):
         self.bot = bot
         self._states: dict[int, MusicService] = {}
 
-    def _get_service(self, interaction: discord.Interaction) -> MusicService:
+    def get_or_create_service(self, interaction: discord.Interaction) -> MusicService:
         guild_id = interaction.guild_id
         if guild_id not in self._states:
             service = MusicService(self.bot, interaction.guild)
@@ -87,7 +87,7 @@ class MusicCog(commands.Cog, name="Music"):
         self._check_channel(interaction)
         await interaction.response.defer()
         await self._ensure_voice(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
 
         max_q = guild_config.max_queue(interaction.guild_id)
         if len(service.queue) >= max_q:
@@ -133,7 +133,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="queue", description="Muestra la cola de reproducción")
     async def queue(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         if not service.current and not service.queue:
             return await interaction.response.send_message("La cola está vacía.")
         lines = []
@@ -179,7 +179,7 @@ class MusicCog(commands.Cog, name="Music"):
         self._check_dj(interaction)
         if not 0 <= value <= 100:
             return await interaction.response.send_message("El volumen debe estar entre 0 y 100.")
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         service.volume = value / 100
         vc = interaction.guild.voice_client
         if vc and isinstance(vc.source, discord.PCMVolumeTransformer):
@@ -189,7 +189,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="now", description="Muestra la canción que suena ahora")
     async def now(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         if not service.current:
             return await interaction.response.send_message("No hay nada reproduciéndose.")
         embed = build_now_playing_embed(service.current, service)
@@ -199,7 +199,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="replay", description="Reinicia la canción actual desde el principio")
     async def replay(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         if not service.current:
             return await interaction.response.send_message("No hay nada reproduciéndose.")
         vc = interaction.guild.voice_client
@@ -212,7 +212,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="seek", description="Salta a un punto de la canción (formato: 1:30 o 90)")
     async def seek(self, interaction: discord.Interaction, tiempo: str) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         if not service.current:
             return await interaction.response.send_message("No hay nada reproduciéndose.")
 
@@ -235,7 +235,7 @@ class MusicCog(commands.Cog, name="Music"):
     async def previous(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
         self._check_dj(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         if not service.history:
             return await interaction.response.send_message("No hay historial de canciones.")
         prev_track = service.history.pop()
@@ -252,7 +252,7 @@ class MusicCog(commands.Cog, name="Music"):
     ])
     async def autoplay(self, interaction: discord.Interaction, mode: str) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         service.autoplay = mode == "on"
         icon = "▶️" if service.autoplay else "⏹️"
         await interaction.response.send_message(f"{icon} Autoplay: **{'activado' if service.autoplay else 'desactivado'}**")
@@ -260,7 +260,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="voteskip", description="Vota para saltear la canción actual")
     async def voteskip(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         if not service.current:
             return await interaction.response.send_message("No hay nada reproduciéndose.")
 
@@ -296,7 +296,7 @@ class MusicCog(commands.Cog, name="Music"):
     async def loop(self, interaction: discord.Interaction, mode: str) -> None:
         self._check_channel(interaction)
         self._check_dj(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         service.loop_mode = LoopMode(mode)
         labels = {
             "off": "🔕 Loop desactivado",
@@ -308,7 +308,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="shuffle", description="Mezcla aleatoriamente la cola")
     async def shuffle(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         if len(service.queue) < 2:
             return await interaction.response.send_message("La cola tiene menos de 2 canciones.")
         service.shuffle()
@@ -317,7 +317,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="remove", description="Elimina una canción de la cola por posición")
     async def remove(self, interaction: discord.Interaction, position: int) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         try:
             removed = service.remove(position)
         except ValueError as e:
@@ -327,7 +327,7 @@ class MusicCog(commands.Cog, name="Music"):
     @app_commands.command(name="move", description="Mueve una canción a otra posición en la cola")
     async def move(self, interaction: discord.Interaction, desde: int, hacia: int) -> None:
         self._check_channel(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         try:
             service.move(desde, hacia)
         except ValueError as e:
@@ -338,7 +338,7 @@ class MusicCog(commands.Cog, name="Music"):
     async def clear(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
         self._check_dj(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         service.queue.clear()
         await interaction.response.send_message("🧹 Cola limpiada.")
 
@@ -346,7 +346,7 @@ class MusicCog(commands.Cog, name="Music"):
     async def leave(self, interaction: discord.Interaction) -> None:
         self._check_channel(interaction)
         self._check_dj(interaction)
-        service = self._get_service(interaction)
+        service = self.get_or_create_service(interaction)
         await service.disconnect()
         self._states.pop(interaction.guild_id, None)
         await interaction.response.send_message("🛑 Devil Trigger se apagó.")
