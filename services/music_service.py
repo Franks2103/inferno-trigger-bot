@@ -21,11 +21,33 @@ class LoopMode(Enum):
     QUEUE = "queue"
 
 
+class AudioFilter(Enum):
+    OFF = "off"
+    BASS_BOOST = "bassboost"
+    NIGHTCORE = "nightcore"
+    VAPORWAVE = "vaporwave"
+    SLOWED = "slowed"
+    KARAOKE = "karaoke"
+
+
+FILTER_ARGS: dict["AudioFilter", str] = {
+    AudioFilter.OFF: "",
+    AudioFilter.BASS_BOOST: "bass=g=10",
+    AudioFilter.NIGHTCORE: "asetrate=44100*1.25,aresample=44100",
+    AudioFilter.VAPORWAVE: "asetrate=44100*0.8,aresample=44100",
+    AudioFilter.SLOWED: "atempo=0.85",
+    AudioFilter.KARAOKE: "pan=stereo|c0=c0-c1|c1=c1-c0",
+}
+
+
 class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, track: Track, *, volume: float, seek_to: int = 0):
+    def __init__(self, track: Track, *, volume: float, seek_to: int = 0, audio_filter: "AudioFilter | None" = None):
         options = dict(FFMPEG_OPTIONS)
         if seek_to:
             options["before_options"] = f"{options.get('before_options', '')} -ss {seek_to}"
+        filter_str = FILTER_ARGS.get(audio_filter, "") if audio_filter else ""
+        if filter_str:
+            options["options"] = f"{options.get('options', '')} -af \"{filter_str}\""
         source = discord.FFmpegPCMAudio(track.stream_url, **options)
         super().__init__(source, volume)
         self.track = track
@@ -40,6 +62,7 @@ class MusicService:
         self.current: Optional[Track] = None
         self.volume = 0.5
         self.loop_mode: LoopMode = LoopMode.OFF
+        self.audio_filter: AudioFilter = AudioFilter.OFF
         self.autoplay: bool = False
         self.text_channel: Optional[discord.abc.Messageable] = None
         self.on_track_start: OnTrackStart = None
@@ -135,7 +158,7 @@ class MusicService:
 
             seek_to = self._seek_position
             self._seek_position = 0
-            source = YTDLSource(track, volume=self.volume, seek_to=seek_to)
+            source = YTDLSource(track, volume=self.volume, seek_to=seek_to, audio_filter=self.audio_filter)
             self._track_start_time = time.monotonic()
 
             def after_play(error: Optional[Exception]) -> None:

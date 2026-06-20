@@ -14,7 +14,7 @@ from services.extractor import (
     looks_like_url,
     search_tracks,
 )
-from services.music_service import LoopMode, MusicService
+from services.music_service import AudioFilter, LoopMode, MusicService
 from ui.player_view import NowPlayingView, build_now_playing_embed
 from ui.search_view import SearchView, build_search_embed
 
@@ -340,6 +340,41 @@ class MusicCog(commands.Cog, name="Music"):
         await service.disconnect()
         self._states.pop(interaction.guild_id, None)
         await interaction.response.send_message("🛑 Devil Trigger se apagó.")
+
+    @app_commands.command(name="filter", description="Aplica un filtro de audio a la reproducción")
+    @app_commands.choices(name=[
+        app_commands.Choice(name="Off (sin filtro)", value="off"),
+        app_commands.Choice(name="Bass Boost", value="bassboost"),
+        app_commands.Choice(name="Nightcore (+25% velocidad)", value="nightcore"),
+        app_commands.Choice(name="Vaporwave (-20% velocidad)", value="vaporwave"),
+        app_commands.Choice(name="Slowed (-15% velocidad)", value="slowed"),
+        app_commands.Choice(name="Karaoke (elimina voz central)", value="karaoke"),
+    ])
+    async def filter(self, interaction: discord.Interaction, name: str) -> None:
+        self._check_channel(interaction)
+        perms.check(interaction, "filter")
+        service = self.get_or_create_service(interaction)
+
+        new_filter = AudioFilter(name)
+        service.audio_filter = new_filter
+
+        # Restart current track with new filter at current position
+        if service.current:
+            elapsed = service.elapsed_seconds
+            service.seek(elapsed)
+            vc = interaction.guild.voice_client
+            if vc and (vc.is_playing() or vc.is_paused()):
+                vc.stop()
+
+        labels = {
+            "off": "🔇 Sin filtro",
+            "bassboost": "🔈 Bass Boost activado",
+            "nightcore": "⚡ Nightcore activado",
+            "vaporwave": "🌊 Vaporwave activado",
+            "slowed": "🐌 Slowed activado",
+            "karaoke": "🎤 Karaoke activado",
+        }
+        await interaction.response.send_message(labels[name])
 
     async def cog_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
