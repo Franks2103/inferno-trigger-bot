@@ -30,6 +30,7 @@ def configure_logging() -> None:
 intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
+intents.members = True  # needed for role.members count and member lookups
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -50,6 +51,7 @@ async def main() -> None:
         await bot.load_extension("cogs.favorites_cog")
         await bot.load_extension("cogs.stats_cog")
         await bot.load_extension("cogs.tts_bridge_cog")
+        await bot.load_extension("cogs.admin_cog")
         logger.info("Extensiones cargadas; iniciando conexión Discord")
         await bot.start(TOKEN)
 
