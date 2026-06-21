@@ -43,3 +43,7 @@ TTS_PROVIDER = os.getenv("TTS_PROVIDER", "espeak")
 TTS_MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "250"))
 TTS_COOLDOWN_SECONDS = int(os.getenv("TTS_COOLDOWN_SECONDS", "5"))
 TTS_TEMP_DIR = Path(os.getenv("TTS_TEMP_DIR", "temp/tts"))
+
+# Mistral DJ recommendation service
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
+MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "ministral-3b")
