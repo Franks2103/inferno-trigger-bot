@@ -52,6 +52,7 @@ async def main() -> None:
         await bot.load_extension("cogs.stats_cog")
         await bot.load_extension("cogs.tts_bridge_cog")
         await bot.load_extension("cogs.admin_cog")
+        await bot.load_extension("cogs.dj_cog")
         logger.info("Extensiones cargadas; iniciando conexión Discord")
         await bot.start(TOKEN)
 
