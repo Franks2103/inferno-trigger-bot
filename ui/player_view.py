@@ -171,13 +171,14 @@ class NowPlayingView(discord.ui.View):
     @discord.ui.button(label="Stop", emoji="⏹️", style=discord.ButtonStyle.danger, row=0)
     async def stop(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         try:
-            perms.check(interaction, "leave")
+            perms.check(interaction, "clear")
         except app_commands.AppCommandError as e:
             return await interaction.response.send_message(str(e), ephemeral=True)
-        await self.service.disconnect()
-        for item in self.children:
-            item.disabled = True
-        await interaction.response.edit_message(view=self)
+        self.service.queue.clear()
+        if self.service.current:
+            self.service.stop_current()
+        await self.service.update_panel()
+        await interaction.response.send_message("⏹️ Música detenida. Sigo conectado y el chatbot sigue activo.", ephemeral=True)
 
     # ── Fila 1: audio y cola ─────────────────────────────────────────────────
 

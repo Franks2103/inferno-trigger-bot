@@ -25,6 +25,7 @@ class MusicCog(commands.Cog, name="Music"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._states: dict[int, MusicService] = {}
+        self._now_playing_messages: dict[int, discord.Message] = {}
 
     def get_or_create_service(self, interaction: discord.Interaction) -> MusicService:
         service = self.get_or_create_service_for_guild(interaction.guild)
@@ -48,7 +49,27 @@ class MusicCog(commands.Cog, name="Music"):
         if service.text_channel:
             embed = build_now_playing_embed(track, service)
             view = NowPlayingView(service)
-            await service.text_channel.send(embed=embed, view=view)
+            previous = self._now_playing_messages.get(service.guild.id)
+            try:
+                if previous:
+                    await previous.edit(embed=embed, view=view)
+                else:
+                    self._now_playing_messages[service.guild.id] = await service.text_channel.send(embed=embed, view=view)
+            except discord.HTTPException:
+                self._now_playing_messages[service.guild.id] = await service.text_channel.send(embed=embed, view=view)
+        await service.update_panel()
+
+    async def refresh_player_ui(self, guild_id: int) -> None:
+        """Edit the existing now-playing message/panel instead of sending duplicates."""
+        service = self._states.get(guild_id)
+        if service is None:
+            return
+        message = self._now_playing_messages.get(guild_id)
+        if message and service.current:
+            try:
+                await message.edit(embed=build_now_playing_embed(service.current, service), view=NowPlayingView(service))
+            except discord.HTTPException:
+                pass
         await service.update_panel()
 
     async def _ensure_voice(self, interaction: discord.Interaction) -> discord.VoiceClient:

@@ -76,14 +76,13 @@ ACTION_PERMS: dict[str, PermLevel] = {
 }
 
 
-def check(interaction: discord.Interaction, action: str) -> None:
-    """Raise AppCommandError if the user lacks permission for `action`."""
+def check_member(guild_id: int, member: discord.Member, action: str) -> None:
+    """Raise AppCommandError if a member lacks permission for an action."""
     required = ACTION_PERMS.get(action, PermLevel.DJ)
 
     if required == PermLevel.EVERYONE:
         return
 
-    member = interaction.user
     if member.guild_permissions.administrator:
         return
 
@@ -91,12 +90,17 @@ def check(interaction: discord.Interaction, action: str) -> None:
         raise app_commands.AppCommandError("Solo los administradores pueden usar este comando.")
 
     # DJ level
-    dj_id = guild_config.dj_role_id(interaction.guild_id)
+    dj_id = guild_config.dj_role_id(guild_id)
     if dj_id is None:
         return  # No DJ role configured → everyone can use DJ commands
     role_ids = {r.id for r in member.roles}
     if dj_id not in role_ids:
         raise app_commands.AppCommandError("Necesitás el rol DJ para usar este comando.")
+
+
+def check(interaction: discord.Interaction, action: str) -> None:
+    """Interaction adapter kept for slash commands."""
+    check_member(interaction.guild_id, interaction.user, action)
 
 
 def check_tts_manager(interaction: discord.Interaction) -> None:

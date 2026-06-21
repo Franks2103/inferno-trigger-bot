@@ -72,7 +72,8 @@ class MusicService:
         self.volume = 0.5
         self.loop_mode: LoopMode = LoopMode.OFF
         self.audio_filter: AudioFilter = AudioFilter.OFF
-        self.autoplay: bool = False
+        # Keep music flowing after a normal track ends. Explicit stop disables it.
+        self.autoplay: bool = True
         self.text_channel: Optional[discord.abc.Messageable] = None
         self.on_track_start: OnTrackStart = None
         self.skip_votes: VoteManager = VoteManager(threshold=0.5, min_votes=1)
