@@ -66,6 +66,10 @@ ACTION_PERMS: dict[str, PermLevel] = {
     "channel-slowmode": PermLevel.ADMIN,
     # Admin panel
     "adminpanel": PermLevel.ADMIN,
+    # DJ mode
+    "dj-start": PermLevel.DJ,
+    "dj-stop": PermLevel.DJ,
+    "dj-status": PermLevel.EVERYONE,
 }
 
 

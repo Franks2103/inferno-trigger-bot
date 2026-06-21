@@ -81,6 +81,9 @@ class MusicService:
         self._next_event = asyncio.Event()
         self._player_task: Optional[asyncio.Task] = None
         self.audio = GuildAudioCoordinator(bot, guild)
+        self.dj_mode: bool = False
+        self.dj_mood: str | None = None
+        self._dj_refill_task: asyncio.Task | None = None
 
     @property
     def elapsed_seconds(self) -> int:
@@ -218,10 +221,33 @@ class MusicService:
                 elif self.autoplay and not self.queue:
                     await self._queue_autoplay_track(track)
 
+                if self.dj_mode and len(self.queue) <= 1:
+                    if self._dj_refill_task is None or self._dj_refill_task.done():
+                        self._dj_refill_task = asyncio.create_task(
+                            self._refill_dj_queue()
+                        )
+
             self.current = None
 
     async def _queue_autoplay_track(self, last_track: Track) -> None:
-        from services.extractor import get_related_track
+        from services import mistral_dj
+        from services.extractor import get_related_track, search_tracks
+
+        try:
+            suggestions = await mistral_dj.get_recommendations(self.guild.id, count=1)
+            if suggestions:
+                tracks = await search_tracks(suggestions[0], last_track.requester, limit=1)
+                if tracks:
+                    self.add(tracks[0])
+                    if self.text_channel:
+                        await self.text_channel.send(
+                            f"🤖 Autoplay (IA): **{tracks[0].title}**"
+                        )
+                    return
+        except Exception as e:
+            logger.warning("Mistral autoplay error guild=%s error=%s", self.guild.id, e)
+
+        # Fallback al método original
         try:
             related = await get_related_track(last_track, last_track.requester)
             if related:
@@ -230,6 +256,23 @@ class MusicService:
                     await self.text_channel.send(f"🤖 Autoplay: **{related.title}**")
         except Exception as e:
             logger.warning("Autoplay error guild=%s error=%s", self.guild.id, e)
+
+    async def _refill_dj_queue(self) -> None:
+        from services import mistral_dj
+        from services.extractor import search_tracks
+
+        suggestions = await mistral_dj.get_recommendations(
+            self.guild.id, mood=self.dj_mood, count=5
+        )
+        for title in suggestions:
+            if not self.dj_mode:
+                break
+            try:
+                tracks = await search_tracks(title, self.guild.me, limit=1)
+                if tracks:
+                    self.add(tracks[0])
+            except Exception:
+                continue
 
     async def disconnect(self, *, cancel_player: bool = True) -> None:
         await self.audio.close()
@@ -241,6 +284,11 @@ class MusicService:
 
         self.queue.clear()
         self.current = None
+
+        if self._dj_refill_task and not self._dj_refill_task.done():
+            self._dj_refill_task.cancel()
+        self.dj_mode = False
+        self.dj_mood = None
 
         if cancel_player and self._player_task and not self._player_task.done():
             self._player_task.cancel()
