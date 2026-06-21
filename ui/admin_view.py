@@ -194,7 +194,7 @@ class WarnModal(discord.ui.Modal, title="Warn a usuario"):
             moderator_name=str(mod),
             reason=reason,
         )
-        count = len(modlog_svc.get_entries(interaction.guild_id, uid))
+        count = len(modlog_svc.get_entries(interaction.guild_id, uid, entry_type="warn"))
         await interaction.response.send_message(
             embed=success_embed(f"{member.mention} recibió un warn (`{count}` total). Razón: {reason}\nID: `{entry['id'][:8]}`"),
             ephemeral=True,
