@@ -56,8 +56,11 @@ def add_entry(
     return entry
 
 
-def get_entries(guild_id: int, target_id: int) -> list[dict]:
-    return [e for e in _load(guild_id) if e["target_id"] == target_id]
+def get_entries(guild_id: int, target_id: int, entry_type: str | None = None) -> list[dict]:
+    entries = [e for e in _load(guild_id) if e["target_id"] == target_id]
+    if entry_type is not None:
+        entries = [e for e in entries if e["type"] == entry_type]
+    return entries
 
 
 def remove_entry(guild_id: int, entry_id: str) -> bool:

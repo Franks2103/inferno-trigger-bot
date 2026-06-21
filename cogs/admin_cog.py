@@ -170,7 +170,7 @@ class AdminCog(commands.Cog, name="Admin"):
             moderator_name=str(interaction.user),
             reason=razon,
         )
-        count = len(modlog_svc.get_entries(interaction.guild_id, usuario.id))
+        count = len(modlog_svc.get_entries(interaction.guild_id, usuario.id, entry_type="warn"))
         await interaction.response.send_message(
             embed=success_embed(
                 f"{usuario.mention} recibió un warn (`{count}` total). Razón: {razon}\nID: `{entry['id'][:8]}`"
@@ -181,9 +181,9 @@ class AdminCog(commands.Cog, name="Admin"):
     @app_commands.describe(usuario="El miembro a consultar")
     async def warns(self, interaction: discord.Interaction, usuario: discord.Member) -> None:
         perms.check(interaction, "warns")
-        entries = modlog_svc.get_entries(interaction.guild_id, usuario.id)
+        entries = modlog_svc.get_entries(interaction.guild_id, usuario.id, entry_type="warn")
         embed = discord.Embed(
-            title=f"📋 Historial de {usuario.display_name}",
+            title=f"⚠️ Warns de {usuario.display_name}",
             color=discord.Color.orange() if entries else discord.Color.green(),
         )
         if not entries:
@@ -206,7 +206,7 @@ class AdminCog(commands.Cog, name="Admin"):
         warn_id: str,
     ) -> None:
         perms.check(interaction, "unwarn")
-        entries = modlog_svc.get_entries(interaction.guild_id, usuario.id)
+        entries = modlog_svc.get_entries(interaction.guild_id, usuario.id, entry_type="warn")
         full_id = next((e["id"] for e in entries if e["id"].startswith(warn_id.strip())), None)
         if full_id is None:
             return await interaction.response.send_message(

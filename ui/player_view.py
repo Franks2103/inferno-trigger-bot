@@ -197,9 +197,7 @@ class NowPlayingView(discord.ui.View):
     @discord.ui.button(label="Vol -", emoji="🔉", style=discord.ButtonStyle.secondary, row=1)
     async def vol_down(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         self.service.volume = max(0.0, self.service.volume - 0.1)
-        vc = interaction.guild.voice_client
-        if vc and isinstance(vc.source, discord.PCMVolumeTransformer):
-            vc.source.volume = self.service.volume
+        self.service.set_volume(self.service.volume)
         await interaction.response.send_message(
             f"🔉 Volumen: **{int(self.service.volume * 100)}%**", ephemeral=True
         )
@@ -207,9 +205,7 @@ class NowPlayingView(discord.ui.View):
     @discord.ui.button(label="Vol +", emoji="🔊", style=discord.ButtonStyle.secondary, row=1)
     async def vol_up(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         self.service.volume = min(1.0, self.service.volume + 0.1)
-        vc = interaction.guild.voice_client
-        if vc and isinstance(vc.source, discord.PCMVolumeTransformer):
-            vc.source.volume = self.service.volume
+        self.service.set_volume(self.service.volume)
         await interaction.response.send_message(
             f"🔊 Volumen: **{int(self.service.volume * 100)}%**", ephemeral=True
         )
