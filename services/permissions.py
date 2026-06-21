@@ -48,6 +48,24 @@ ACTION_PERMS: dict[str, PermLevel] = {
     "config-show": PermLevel.EVERYONE,
     "stats": PermLevel.EVERYONE,
     "top": PermLevel.EVERYONE,
+    # Admin moderation
+    "ban": PermLevel.ADMIN,
+    "unban": PermLevel.ADMIN,
+    "kick": PermLevel.ADMIN,
+    "timeout": PermLevel.ADMIN,
+    "warn": PermLevel.ADMIN,
+    "warns": PermLevel.EVERYONE,
+    "unwarn": PermLevel.ADMIN,
+    # Admin roles
+    "role-give": PermLevel.ADMIN,
+    "role-remove": PermLevel.ADMIN,
+    "role-info": PermLevel.EVERYONE,
+    # Admin channels
+    "channel-lock": PermLevel.ADMIN,
+    "channel-unlock": PermLevel.ADMIN,
+    "channel-slowmode": PermLevel.ADMIN,
+    # Admin panel
+    "adminpanel": PermLevel.ADMIN,
 }
 
 
