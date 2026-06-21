@@ -3,8 +3,10 @@ import logging
 import random
 import time
 from collections import deque
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Awaitable, Callable, Optional
+from uuid import uuid4
 
 import discord
 from discord.ext import commands
@@ -84,6 +86,9 @@ class MusicService:
         self.dj_mode: bool = False
         self.dj_mood: str | None = None
         self._dj_refill_task: asyncio.Task | None = None
+        self._session_id: str = uuid4().hex[:8]
+        self._current_skipped: bool = False
+        self._track_started_at: str = ""
 
     @property
     def elapsed_seconds(self) -> int:
@@ -96,6 +101,12 @@ class MusicService:
 
     def add(self, track: Track) -> None:
         self.queue.append(track)
+        self._queue_event.set()
+        self._start_player()
+
+    def add_next(self, track: Track) -> None:
+        """Insert track at front of queue, bypassing DJ-filled tracks."""
+        self.queue.appendleft(track)
         self._queue_event.set()
         self._start_player()
 
@@ -155,6 +166,8 @@ class MusicService:
 
             self.current = track
             self.skip_votes.reset()
+            self._current_skipped = False
+            self._track_started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
             if track.stream_url is None:
                 try:
@@ -184,6 +197,7 @@ class MusicService:
             except RuntimeError:
                 self.current = None
                 continue
+            _elapsed_ms = int((time.monotonic() - self._track_start_time) * 1000)
             self._track_start_time = 0.0
 
             if self._pending_seek is not None:
@@ -196,6 +210,12 @@ class MusicService:
                 self._queue_event.set()
             else:
                 self.history.append(track)
+                duration_ms = (track.duration * 1000) if track.duration else None
+                full_play = (
+                    _elapsed_ms >= duration_ms * 0.8
+                    if duration_ms
+                    else _elapsed_ms >= 30_000
+                )
                 history_store.push(
                     self.guild.id,
                     {
@@ -204,6 +224,12 @@ class MusicService:
                         "thumbnail": track.thumbnail,
                         "requester_id": track.requester.id,
                         "requester_name": track.requester.display_name,
+                        "session_id": self._session_id,
+                        "started_at": self._track_started_at,
+                        "ms_played": _elapsed_ms,
+                        "duration_ms": duration_ms,
+                        "skipped": self._current_skipped,
+                        "full_play": full_play,
                     },
                 )
                 stats_store.record_play(
@@ -234,7 +260,7 @@ class MusicService:
         from services.extractor import get_related_track, search_tracks
 
         try:
-            suggestions = await mistral_dj.get_recommendations(self.guild.id, count=1)
+            suggestions, _ = await mistral_dj.get_recommendations(self.guild.id, count=1)
             if suggestions:
                 tracks = await search_tracks(suggestions[0], last_track.requester, limit=1)
                 if tracks:
@@ -261,7 +287,7 @@ class MusicService:
         from services import mistral_dj
         from services.extractor import search_tracks
 
-        suggestions = await mistral_dj.get_recommendations(
+        suggestions, _ = await mistral_dj.get_recommendations(
             self.guild.id, mood=self.dj_mood, count=5
         )
         for title in suggestions:
@@ -289,12 +315,15 @@ class MusicService:
             self._dj_refill_task.cancel()
         self.dj_mode = False
         self.dj_mood = None
+        self._session_id = uuid4().hex[:8]
+        self._current_skipped = False
 
         if cancel_player and self._player_task and not self._player_task.done():
             self._player_task.cancel()
 
     def stop_current(self) -> None:
         """Stop only the music layer; active TTS continues safely."""
+        self._current_skipped = True
         self.audio.stop_music()
 
     def set_volume(self, volume: float) -> None:

@@ -67,10 +67,15 @@ class SearchView(discord.ui.View):
                 return await interaction.response.send_message(
                     "Solo quien buscó puede elegir.", ephemeral=True
                 )
-            self.service.add(track)
+            if self.service.dj_mode and self.service.current:
+                self.service.add_next(track)
+                msg = f"⚡ Siguiente (modo DJ): **{track.title}**"
+            else:
+                self.service.add(track)
+                msg = f"🎶 Añadida: **{track.title}**"
             self._disable_all()
             await interaction.response.edit_message(
-                content=f"🎶 Añadida: **{track.title}**",
+                content=msg,
                 embed=None,
                 view=self,
             )

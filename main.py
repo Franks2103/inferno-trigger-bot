@@ -35,9 +35,16 @@ intents.members = True  # needed for role.members count and member lookups
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
+_DEV_GUILD_ID = os.getenv("DEV_GUILD_ID")
+_DEV_GUILD = discord.Object(id=int(_DEV_GUILD_ID)) if _DEV_GUILD_ID else None
+
 @bot.event
 async def on_ready() -> None:
-    await bot.tree.sync()
+    if _DEV_GUILD:
+        bot.tree.copy_global_to(guild=_DEV_GUILD)
+        await bot.tree.sync(guild=_DEV_GUILD)
+    else:
+        await bot.tree.sync()
     logging.getLogger(__name__).info("Bot listo user=%s guilds=%s", bot.user, len(bot.guilds))
 
 
@@ -53,6 +60,7 @@ async def main() -> None:
         await bot.load_extension("cogs.tts_bridge_cog")
         await bot.load_extension("cogs.admin_cog")
         await bot.load_extension("cogs.dj_cog")
+        await bot.load_extension("cogs.ai_cog")
         logger.info("Extensiones cargadas; iniciando conexión Discord")
         await bot.start(TOKEN)
 

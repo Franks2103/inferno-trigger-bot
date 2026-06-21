@@ -103,20 +103,28 @@ class MusicCog(commands.Cog, name="Music"):
         elif looks_like_spotify_url(query):
             track = await create_track_from_spotify(query, interaction.user)
             was_playing = service.current is not None
-            service.add(track)
-            if was_playing:
-                await interaction.followup.send(f"➕ Añadida (vía Spotify): **{track.title}**")
+            if service.dj_mode and was_playing:
+                service.add_next(track)
+                await interaction.followup.send(f"⚡ Siguiente (modo DJ): **{track.title}**")
             else:
-                await interaction.followup.send(f"🎶 Preparando (vía Spotify): **{track.title}**")
+                service.add(track)
+                if was_playing:
+                    await interaction.followup.send(f"➕ Añadida (vía Spotify): **{track.title}**")
+                else:
+                    await interaction.followup.send(f"🎶 Preparando (vía Spotify): **{track.title}**")
 
         elif looks_like_url(query):
             was_playing = service.current is not None
             track = await create_track(query, interaction.user)
-            service.add(track)
-            if was_playing:
-                await interaction.followup.send(f"➕ Añadida a la cola: **{track.title}**")
+            if service.dj_mode and was_playing:
+                service.add_next(track)
+                await interaction.followup.send(f"⚡ Siguiente (modo DJ): **{track.title}**")
             else:
-                await interaction.followup.send(f"🎶 Preparando: **{track.title}**")
+                service.add(track)
+                if was_playing:
+                    await interaction.followup.send(f"➕ Añadida a la cola: **{track.title}**")
+                else:
+                    await interaction.followup.send(f"🎶 Preparando: **{track.title}**")
 
         else:
             tracks = await search_tracks(query, interaction.user)

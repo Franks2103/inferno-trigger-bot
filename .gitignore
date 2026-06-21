@@ -41,3 +41,5 @@ Thumbs.db
 # Claude / superpowers (local dev tooling)
 .claude/
 docs/superpowers/
+.superpowers/
+AGENTS.md

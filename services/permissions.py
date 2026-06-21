@@ -70,6 +70,9 @@ ACTION_PERMS: dict[str, PermLevel] = {
     "dj-start": PermLevel.DJ,
     "dj-stop": PermLevel.DJ,
     "dj-status": PermLevel.EVERYONE,
+    # AI
+    "summary": PermLevel.EVERYONE,
+    "ai": PermLevel.EVERYONE,
 }
 
 

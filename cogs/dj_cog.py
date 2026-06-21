@@ -20,6 +20,12 @@ class DJCog(commands.Cog, name="DJ"):
             return None
         return music_cog.get_service_for_guild(interaction.guild_id)
 
+    def _get_or_create_service(self, interaction: discord.Interaction):
+        music_cog = self.bot.cogs.get("Music")
+        if music_cog is None:
+            return None
+        return music_cog.get_or_create_service_for_guild(interaction.guild)
+
     @app_commands.command(name="dj", description="Controla el modo DJ automático")
     @app_commands.describe(
         accion="Acción a realizar: start, stop o status",
@@ -44,23 +50,33 @@ class DJCog(commands.Cog, name="DJ"):
         service = self._get_service(interaction)
 
         if accion == "start":
-            if not interaction.guild.voice_client:
+            if interaction.user.voice is None or interaction.user.voice.channel is None:
                 return await interaction.response.send_message(
-                    embed=error_embed("El bot no está en ningún canal de voz. Usá `/play` primero."),
+                    embed=error_embed("Tenés que estar en un canal de voz para activar el DJ."),
                     ephemeral=True,
                 )
-            service = self._get_service(interaction)
+
+            await interaction.response.defer()
+
+            # Join voice if not already connected
+            voice_channel = interaction.user.voice.channel
+            vc = interaction.guild.voice_client
+            if vc is None:
+                await voice_channel.connect()
+            elif vc.channel != voice_channel:
+                await vc.move_to(voice_channel)
+
+            service = self._get_or_create_service(interaction)
             if service is None:
-                return await interaction.response.send_message(
-                    embed=error_embed("No hay sesión de música activa."), ephemeral=True
+                return await interaction.followup.send(
+                    embed=error_embed("No se pudo iniciar la sesión de música."), ephemeral=True
                 )
 
             service.dj_mode = True
             service.dj_mood = mood or None
+            service.text_channel = interaction.channel
 
-            await interaction.response.defer()
-
-            suggestions = await mistral_dj.get_recommendations(
+            suggestions, commentary = await mistral_dj.get_recommendations(
                 interaction.guild_id, mood=mood, count=5
             )
             if not suggestions:
@@ -92,6 +108,8 @@ class DJCog(commands.Cog, name="DJ"):
                 description=f"Agregué {len(queued)} canciones a la cola{mood_text}:\n{lines}",
                 color=discord.Color.purple(),
             )
+            if commentary:
+                embed.add_field(name="🎙️ Bandelion DJ", value=commentary, inline=False)
             embed.set_footer(text="El DJ seguirá agregando canciones automáticamente.")
             await interaction.followup.send(embed=embed)
 

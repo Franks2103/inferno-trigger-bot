@@ -46,4 +46,4 @@ TTS_TEMP_DIR = Path(os.getenv("TTS_TEMP_DIR", "temp/tts"))
 
 # Mistral DJ recommendation service
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
-MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "ministral-3b")
+MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral-small-latest")

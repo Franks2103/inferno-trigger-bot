@@ -101,10 +101,16 @@ class SearchModal(discord.ui.Modal, title="Buscar canción"):
             await interaction.followup.send("No se encontraron resultados.", ephemeral=True)
             return
         track = tracks[0]
-        self.service.add(track)
-        await interaction.followup.send(
-            f"🔍 Agregado a la cola: **{track.title}**", ephemeral=True
-        )
+        if self.service.dj_mode and self.service.current:
+            self.service.add_next(track)
+            await interaction.followup.send(
+                f"⚡ Siguiente (modo DJ): **{track.title}**", ephemeral=True
+            )
+        else:
+            self.service.add(track)
+            await interaction.followup.send(
+                f"🔍 Agregado a la cola: **{track.title}**", ephemeral=True
+            )
 
 
 # ── Now Playing View ──────────────────────────────────────────────────────────

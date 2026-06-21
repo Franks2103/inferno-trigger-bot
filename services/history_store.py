@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 _DATA_FILE = Path(__file__).parent.parent / "data" / "history.json"
-MAX_PER_GUILD = 50
+MAX_PER_GUILD = 100
 
 
 def _load() -> dict:
